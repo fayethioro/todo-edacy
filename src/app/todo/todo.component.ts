@@ -8,10 +8,11 @@ import {
   Validators,
 } from '@angular/forms';
 import { initFlowbite } from 'flowbite';
+
 export interface Task {
   description: string;
   done: boolean;
-  date: Date;
+  date: string;
 }
 
 @Component({
@@ -22,50 +23,73 @@ export interface Task {
   styleUrl: './todo.component.css',
 })
 export class TodoComponent implements OnInit {
-  tasks: Task[] = [];
-  tasksCompleted: Task[] = [];
-  newTaskDescription: string = '';
-  newTaskDate: string = '';
+  tasks: Task[] = [
+    { description: 'nouvelle tache', done: false, date: '24/05/2024' },
+  ];
+  tasksCompleted: Task[] = [
+    { description: 'tache terminée', done: true, date: '02/05/2024' },
+  ];
+
+  modalOpen: boolean = false;
+  currentItem: any;
 
   taskForm!: FormGroup;
   submitted: boolean = false;
+  editingTask!: Task;
+
   constructor(private formBuilder: FormBuilder) {
     this.taskForm = this.formBuilder.group({
       description: ['', Validators.required],
       date: ['', Validators.required],
     });
   }
-
+  edit: boolean = false;
   ngOnInit(): void {
     initFlowbite();
   }
 
-
-
-  addTask() {
+  addOrUpdateTask() {
     this.submitted = true;
     if (this.taskForm.invalid) {
       return;
     }
+    if (!this.editingTask) {
+      const currentDate = new Date(this.taskForm.value.date);
+      const formattedDate = currentDate.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
 
-    const currentDate = new Date(this.taskForm.value.date);
-    this.tasks.push({
-      description: this.taskForm.value.description,
-      done: false,
-      date: currentDate,
-    });
+      this.tasks.push({
+        description: this.taskForm.value.description,
+        done: false,
+        date: formattedDate,
+      });
+    } else {
+      this.deleteTask(this.editingTask);
+      this.tasks.push({
+        description: this.taskForm.value.description,
+        date: new Date(this.taskForm.value.date).toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        }),
+        done: false,
+      });
+    }
 
     this.taskForm.reset();
     this.submitted = false;
+    this.modalOpen = false;
+    this.editingTask == null;
   }
-
-
   markAsDone(task: Task) {
     const index = this.tasks.indexOf(task);
     if (index !== -1) {
       this.tasks[index].done = true;
       this.tasksCompleted.push(task);
-    this.deleteTask(task);
+      this.deleteTask(task);
     }
   }
 
@@ -90,6 +114,25 @@ export class TodoComponent implements OnInit {
     if (index !== -1) {
       this.tasks.splice(index, 1);
     }
+  }
+
+  openModal(task?: Task) {
+    if (task) {
+      this.taskForm.patchValue({
+        description: task.description,
+        date: task.date.toString().slice(0, 10),
+      });
+      // this.edit = true;
+      this.editingTask = task;
+    }
+
+    this.currentItem = task;
+    this.modalOpen = true;
+  }
+
+  closeModal() {
+    this.modalOpen = false;
+    this.editingTask == null;
   }
 
   get description() {
